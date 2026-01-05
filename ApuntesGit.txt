@@ -1,0 +1,376 @@
+Guía Completa de Comandos de Git
+Navegación en Terminal
+bash
+# Limpiar pantalla
+clear
+
+# Listar contenido del directorio actual
+ls
+
+# Cambiar directorio
+cd <ruta/destino/>
+
+# Mostrar contenido de un archivo
+cat <nombre-del-archivo>
+Configuración Inicial de Git
+bash
+# Configurar nombre de usuario global
+git config --global user.name "Tu Nombre"
+
+# Configurar email global
+git config --global user.email "tu.email@ejemplo.com"
+
+# Configurar editor de texto predeterminado
+git config --global core.editor "code --wait"  # VS Code
+# Alternativas:
+# git config --global core.editor "nano"      # Nano
+# git config --global core.editor "vim"       # Vim
+
+# Configurar manejo de fin de línea (importante para equipos multi-plataforma)
+git config --global core.autocrlf true    # Windows
+git config --global core.autocrlf input   # Mac/Linux
+
+# Configurar archivo global de .gitignore
+git config --global core.excludesfile ~/.gitignore_global
+
+# Editar configuración global
+git config --global -e
+
+# Ver todas las configuraciones
+git config --list
+Inicialización y Estado
+bash
+# Inicializar repositorio en carpeta actual
+git init
+
+# Ver estado detallado
+git status
+
+# Ver estado resumido
+git status -s
+# o
+git status --short
+
+# Los símbolos en git status -s:
+# ?? = Archivo sin seguimiento (untracked)
+# A  = Archivo agregado al staging (added)
+# M  = Archivo modificado (modified)
+# D  = Archivo eliminado (deleted)
+# R  = Archivo renombrado (renamed)
+# C  = Archivo copiado (copied)
+Manejo de Archivos
+bash
+# Agregar archivo específico al staging area
+git add <nombre-del-archivo>
+
+# Agregar todos los archivos nuevos y modificados
+git add .
+# o
+git add --all
+
+# Agregar todos los archivos de un tipo específico
+git add *.js           # Todos los archivos .js
+git add src/*.ts       # Todos los archivos .ts en carpeta src
+
+# Eliminar archivo del repositorio y del sistema de archivos
+git rm <nombre-del-archivo>
+
+# Eliminar solo del repositorio (mantiene en sistema de archivos)
+git rm --cached <nombre-del-archivo>
+
+# Renombrar archivo
+git mv <nombre-actual> <nombre-nuevo>
+
+# Restaurar archivo del staging area (unstaging)
+git restore --staged <nombre-del-archivo>
+
+# Descartar cambios en un archivo no staged
+git restore <nombre-del-archivo>
+
+# Descartar todos los cambios no staged
+git restore .
+
+# Ver cambios entre working directory y staging area
+git diff
+
+# Ver cambios en staging area (comparado con último commit)
+git diff --staged
+# o
+git diff --cached
+
+# Ver cambios en un archivo específico
+git diff <nombre-del-archivo>
+Commits
+bash
+# Crear commit con mensaje
+git commit -m "Descripción del commit"
+
+# Agregar todos los cambios y commit en un solo paso
+git commit -am "Descripción del commit"
+
+# Modificar el último commit (cambia mensaje o agrega archivos olvidados)
+git commit --amend -m "Nuevo mensaje"
+
+# Crear commit con editor de texto para mensaje largo
+git commit
+
+# Ver historial de commits detallado
+git log
+
+# Ver historial de commits resumido
+git log --oneline
+
+# Ver historial con gráfico de ramas
+git log --oneline --graph --all
+
+# Ver historial de un archivo específico
+git log --oneline <nombre-del-archivo>
+
+# Ver cambios introducidos en un commit específico
+git show <hash-del-commit>
+Ramas (Branches)
+bash
+# Ver todas las ramas locales
+git branch
+
+# Ver todas las ramas (locales y remotas)
+git branch -a
+
+# Crear nueva rama
+git branch <nombre-rama>
+
+# Crear y cambiar a nueva rama
+git checkout -b <nombre-rama>
+
+# Cambiar a rama existente
+git checkout <nombre-rama>
+# o (versiones recientes de Git)
+git switch <nombre-rama>
+
+# Fusionar rama actual con otra rama
+git merge <nombre-rama>
+
+# Fusionar rama sin crear commit de merge (fast-forward)
+git merge --ff-only <nombre-rama>
+
+# Eliminar rama local (solo si ya está fusionada)
+git branch -d <nombre-rama>
+
+# Forzar eliminación de rama local
+git branch -D <nombre-rama>
+
+# Renombrar rama actual
+git branch -m <nuevo-nombre>
+
+# Ver última confirmación en cada rama
+git branch -v
+Trabajo con Repositorios Remotos (GitHub/GitLab/Bitbucket)
+bash
+# Conectar repositorio local con remoto
+git remote add origin <url-del-repositorio>
+
+# Ver repositorios remotos configurados
+git remote -v
+
+# Cambiar URL del repositorio remoto
+git remote set-url origin <nueva-url>
+
+# Eliminar conexión con repositorio remoto
+git remote remove origin
+
+# Enviar cambios al repositorio remoto (primera vez)
+git push -u origin <nombre-rama>
+# Ejemplo para rama main:
+git push -u origin main
+
+# Enviar cambios subsecuentes
+git push
+
+# Traer cambios del repositorio remoto
+git pull origin <nombre-rama>
+
+# Clonar repositorio remoto
+git clone <url-del-repositorio>
+
+# Clonar solo una rama específica
+git clone --branch <nombre-rama> <url-del-repositorio>
+
+# Ver información del repositorio remoto
+git remote show origin
+
+# Sincronizar ramas remotas localmente
+git fetch origin
+Archivo .gitignore
+Crear y usar .gitignore
+bash
+# Crear archivo .gitignore en raíz del proyecto
+touch .gitignore
+Patrones comunes para .gitignore
+bash
+# Ignorar por extensión
+*.log
+*.tmp
+*.cache
+
+# Ignorar directorios completos
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignorar archivos específicos
+package-lock.json
+yarn.lock
+
+# Ignorar archivos de configuración del IDE
+.vscode/
+.idea/
+
+# Ignorar archivos del sistema operativo
+.DS_Store          # macOS
+Thumbs.db          # Windows
+
+# Ignorar archivos de dependencias
+*.pyc
+__pycache__/
+
+# Ignorar archivos de base de datos
+*.db
+*.sqlite
+Crear .gitignore_global global
+bash
+# Crear archivo .gitignore_global en directorio home
+touch ~/.gitignore_global
+
+# Agregar configuraciones globales comunes
+echo ".DS_Store" >> ~/.gitignore_global
+echo ".vscode/" >> ~/.gitignore_global
+echo "*.log" >> ~/.gitignore_global
+
+# Configurar Git para usar este archivo
+git config --global core.excludesfile ~/.gitignore_global
+Flujo de Trabajo Recomendado
+1. Inicializar nuevo proyecto
+bash
+mkdir mi-proyecto
+cd mi-proyecto
+git init
+# Configurar .gitignore según el tipo de proyecto
+# Hacer cambios
+git add .
+git commit -m "Commit inicial"
+2. Trabajar en nueva funcionalidad
+bash
+# Crear rama para la funcionalidad
+git checkout -b feature/nueva-funcionalidad
+
+# Trabajar en los cambios
+# Hacer commits frecuentes
+git add .
+git commit -m "Agregar funcionalidad X"
+
+# Fusionar con main/master
+git checkout main
+git pull origin main      # Actualizar main
+git merge feature/nueva-funcionalidad
+git push origin main
+
+# Eliminar rama (opcional)
+git branch -d feature/nueva-funcionalidad
+3. Resolver conflictos de merge
+bash
+# Si hay conflictos durante merge:
+git status               # Ver archivos con conflictos
+# Editar archivos conflictivos
+git add <archivos-resueltos>
+git commit -m "Resolver conflictos"
+Consejos y Buenas Prácticas
+1. Commits Atómicos
+bash
+# Un commit por cada cambio lógico
+# Ejemplo MALO:
+git add .
+git commit -m "Arreglar bugs y agregar funcionalidad"
+
+# Ejemplo BUENO:
+git add bug-fix.js
+git commit -m "Corregir error en cálculo de precio"
+git add new-feature.js
+git commit -m "Agregar filtro de búsqueda por categoría"
+2. Mensajes de Commit Claros
+Usar imperativo ("Agregar", "Corregir", "Mejorar")
+
+Primera línea: Resumen corto (50 caracteres máximo)
+
+Línea en blanco
+
+Descripción detallada si es necesario
+
+3. .gitignore para diferentes tecnologías
+Para Node.js:
+
+text
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.local
+Para Python:
+
+text
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+Para Java:
+
+text
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+target/
+4. Comandos útiles adicionales
+bash
+# Ver quién modificó cada línea de un archivo
+git blame <nombre-del-archivo>
+
+# Buscar en el historial de commits
+git log --grep="palabra-clave"
+
+# Guardar cambios temporalmente (stash)
+git stash              # Guardar cambios
+git stash list         # Ver stashes guardados
+git stash pop          # Recuperar último stash
+git stash apply        # Aplicar stash sin eliminarlo
+
+# Revertir commit específico
+git revert <hash-del-commit>
+
+# Resetear a commit específico (CUIDADO: puede perder cambios)
+git reset --hard <hash-del-commit>
+
+# Ver configuración en una ubicación específica
+git config --local -e     # Solo para el repositorio actual
+git config --global -e    # Configuración global
+git config --system -e    # Configuración del sistema
+Recursos Adicionales
+Alias útiles para agregar a ~/.gitconfig
+bash
+[alias]
+    co = checkout
+    ci = commit
+    st = status
+    br = branch
+    hist = log --pretty=format:'%h %ad | %s%d [%an]' --graph --date=short
+    type = cat-file -t
+    dump = cat-file -p
