@@ -1,0 +1,368 @@
+Método 1: Usando dd (Disk Dump/Destroy)
+Sintaxis básica
+bash
+sudo dd if=/ruta/al/archivo.iso of=/dev/dispositivo bs=tamaño_bloque status=progreso
+Ejemplos específicos
+bash
+# Ejemplo básico con progreso
+sudo dd bs=4M status=progress if=~/Descargas/ubuntu-22.04.iso of=/dev/sdb
+
+# Verificar antes de escribir (MUY IMPORTANTE)
+lsblk
+sudo fdisk -l
+
+# Ejemplo con diferentes tamaños de bloque
+sudo dd if=archivo.iso of=/dev/sdc bs=1M status=progress
+sudo dd if=archivo.iso of=/dev/sdc bs=512K status=progress
+sudo dd if=archivo.iso of=/dev/sdc bs=4M status=progress conv=fsync
+
+# Con verificación MD5 después de escribir
+sudo dd if=archivo.iso of=/dev/sdd bs=4M status=progress
+sudo md5sum archivo.iso
+sudo head -c $(stat -c%s archivo.iso) /dev/sdd | md5sum
+Método 2: Usando cat
+bash
+# Alternativa simple
+sudo cat archivo.iso > /dev/sdb
+
+# Con progreso usando pv
+sudo apt install pv
+pv archivo.iso | sudo dd of=/dev/sdb bs=4M
+Método 3: Usando herramientas gráficas
+Etcher (Recomendado)
+bash
+# Instalar Etcher
+# Método 1: AppImage
+wget https://github.com/balena-io/etcher/releases/latest/download/balena-etcher-electron-*.AppImage
+chmod +x balena-etcher-*.AppImage
+./balena-etcher-*.AppImage
+
+# Método 2: Snap
+sudo snap install --classic etcher
+
+# Método 3: Repositorio
+echo "deb https://deb.etcher.io stable etcher" | sudo tee /etc/apt/sources.list.d/balena-etcher.list
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 379CE192D401AB61
+sudo apt update && sudo apt install balena-etcher-electron
+Ventajas de Etcher:
+Interfaz gráfica amigable
+
+Verificación automática
+
+Previene escritura en discos del sistema
+
+Multiplataforma
+
+UNetbootin
+bash
+# Instalar UNetbootin
+sudo apt update
+sudo apt install unetbootin
+Startup Disk Creator (Ubuntu)
+bash
+# Preinstalado en Ubuntu
+usb-creator-gtk  # GUI
+usb-creator-kde   # KDE
+Método 4: Usando cp (solo para ciertas ISOs)
+bash
+# Para ISOs que son híbridas (la mayoría de distribuciones Linux)
+sudo cp archivo.iso /dev/sdb
+sync
+Método 5: Con woeusb (especial para Windows)
+bash
+# Instalar woeusb
+sudo add-apt-repository ppa:tomtomtom/woeusb
+sudo apt update
+sudo apt install woeusb woeusb-frontend-wxgtk
+
+# Crear USB booteable de Windows
+sudo woeusb --device Windows10.iso /dev/sdb
+Proceso completo paso a paso
+Paso 1: Identificar el dispositivo USB
+bash
+# Ver todos los discos conectados
+lsblk
+# o
+sudo fdisk -l
+# o
+sudo lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,MODEL
+
+# Ejemplo de salida:
+# NAME        SIZE TYPE MOUNTPOINT MODEL
+# sda       465.8G disk           Samsung SSD 860
+# ├─sda1      512M part /boot/efi
+# └─sda2    465.3G part /
+# sdb        14.9G disk           SanDisk Cruzer
+# └─sdb1    14.9G part /media/usuario/USB
+Paso 2: Desmontar el dispositivo
+bash
+# Desmontar todas las particiones
+sudo umount /dev/sdb*
+
+# Verificar que no esté montado
+lsblk | grep sdb
+Paso 3: Crear la memoria booteable
+bash
+# Método dd recomendado
+sudo dd if=~/Descargas/ubuntu-22.04.iso of=/dev/sdb bs=4M status=progress conv=fsync oflag=sync
+
+# Tiempo estimado:
+# USB 2.0: 10-20 minutos
+# USB 3.0: 2-5 minutos
+Paso 4: Verificar la escritura
+bash
+# Opción 1: Comparar checksums
+echo "Checksum original:"
+sha256sum archivo.iso
+
+echo "Checksum del USB:"
+sudo head -c $(stat -c%s archivo.iso) /dev/sdb | sha256sum
+
+# Opción 2: Verificar con fdisk
+sudo fdisk -l /dev/sdb
+
+# Opción 3: Probar con qemu (sin reiniciar)
+sudo apt install qemu-kvm
+qemu-system-x86_64 -hda /dev/sdb -m 2048
+Script completo automatizado
+bash
+#!/bin/bash
+# Script para crear USB booteable de forma segura
+
+set -e  # Detener script en caso de error
+
+echo "=== CREADOR DE USB BOOTEABLE ==="
+echo
+
+# Colores para mensajes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Función para mostrar mensajes
+info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+warn() { echo -e "${YELLOW}[ADVERTENCIA]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+# Verificar que se ejecute como root
+if [ "$EUID" -ne 0 ]; then 
+    error "Por favor ejecuta como root o con sudo"
+    exit 1
+fi
+
+# Paso 1: Listar dispositivos
+info "Dispositivos disponibles:"
+echo "----------------------------------------"
+lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,MODEL,VENDOR | grep -v "loop"
+echo "----------------------------------------"
+
+# Paso 2: Solicitar dispositivo
+read -p "Ingresa el dispositivo (ej: sdb): " DISPOSITIVO
+
+# Validar dispositivo
+if [ ! -b "/dev/$DISPOSITIVO" ]; then
+    error "Dispositivo /dev/$DISPOSITIVO no encontrado"
+    exit 1
+fi
+
+# Confirmación
+warn "¡ATENCIÓN! Se borrarán todos los datos en /dev/$DISPOSITIVO"
+read -p "¿Estás seguro? (s/N): " CONFIRMAR
+if [[ ! $CONFIRMAR =~ ^[Ss]$ ]]; then
+    info "Operación cancelada"
+    exit 0
+fi
+
+# Paso 3: Buscar archivos ISO
+ISOS=$(find ~/Descargas/ ~/Downloads/ /tmp/ -name "*.iso" 2>/dev/null | head -10)
+if [ -z "$ISOS" ]; then
+    read -p "No se encontraron ISOs. Ingresa ruta completa: " ARCHIVO_ISO
+else
+    echo "ISOs encontradas:"
+    select ARCHIVO_ISO in $ISOS; do
+        break
+    done
+fi
+
+# Validar archivo ISO
+if [ ! -f "$ARCHIVO_ISO" ]; then
+    error "Archivo $ARCHIVO_ISO no encontrado"
+    exit 1
+fi
+
+# Paso 4: Desmontar
+info "Desmontando /dev/$DISPOSITIVO..."
+umount /dev/${DISPOSITIVO}* 2>/dev/null || true
+
+# Paso 5: Crear USB booteable
+info "Escribiendo $ARCHIVO_ISO en /dev/$DISPOSITIVO..."
+info "Esto puede tomar varios minutos..."
+
+# Calcular tiempo estimado
+TAMANO_ISO=$(stat -c%s "$ARCHIVO_ISO")
+VELOCIDAD=10000000  # 10 MB/s para USB 2.0
+TIEMPO=$((TAMANO_ISO / VELOCIDAD))
+info "Tiempo estimado: $TIEMPO segundos"
+
+# Escribir con dd
+if command -v pv &> /dev/null; then
+    # Con barra de progreso mejorada
+    pv "$ARCHIVO_ISO" | sudo dd of="/dev/$DISPOSITIVO" bs=4M conv=fsync oflag=dsync
+else
+    # Con progreso básico
+    sudo dd if="$ARCHIVO_ISO" of="/dev/$DISPOSITIVO" bs=4M status=progress conv=fsync
+fi
+
+# Sincronizar
+sync
+
+# Paso 6: Verificar
+info "Verificando escritura..."
+CHECKSUM_ORIGINAL=$(sha256sum "$ARCHIVO_ISO" | cut -d' ' -f1)
+CHECKSUM_USB=$(sudo head -c "$TAMANO_ISO" "/dev/$DISPOSITIVO" | sha256sum | cut -d' ' -f1)
+
+if [ "$CHECKSUM_ORIGINAL" = "$CHECKSUM_USB" ]; then
+    info "✅ USB creado exitosamente!"
+    info "Checksum verificado: $CHECKSUM_USB"
+else
+    error "❌ Error en la verificación"
+    error "Original: $CHECKSUM_ORIGINAL"
+    error "USB:      $CHECKSUM_USB"
+    exit 1
+fi
+
+# Paso 7: Información final
+info "USB listo para usar. Puedes desconectarlo."
+info "Dispositivo: /dev/$DISPOSITIVO"
+info "Imagen: $(basename "$ARCHIVO_ISO")"
+Instrucciones específicas por distribución
+Para Ubuntu/Debian
+bash
+# Usar herramienta oficial
+sudo apt update
+sudo apt install usb-creator-gtk
+
+# O con dd
+sudo dd if=ubuntu-22.04.iso of=/dev/sdb bs=4M status=progress conv=fsync
+Para Fedora
+bash
+# Con dd
+sudo dd if=Fedora-Workstation.iso of=/dev/sdb bs=4M status=progress
+
+# Con fedora-media-writer
+sudo dnf install fedora-media-writer
+Para Arch Linux
+bash
+sudo dd if=archlinux-*.iso of=/dev/sdb bs=4M status=progress
+Para Windows
+bash
+# Usar woeusb
+sudo woeusb --device Win10_21H2_Spanish_x64.iso /dev/sdb
+
+# O ventoy (para múltiples ISOs)
+sudo dd if=ventoy-*.iso of=/dev/sdb bs=4M status=progress
+Para macOS Recovery
+bash
+# Con balenaEtcher (recomendado)
+# O con dd
+sudo dd if=RecoveryHDMeta.dmg of=/dev/sdb bs=4M
+Método avanzado: Ventoy (Múltiples ISOs en un USB)
+bash
+# 1. Descargar Ventoy
+wget https://github.com/ventoy/Ventoy/releases/download/v1.0.88/ventoy-1.0.88-linux.tar.gz
+tar -xzf ventoy-*.tar.gz
+cd ventoy-*
+
+# 2. Instalar en USB
+sudo ./Ventoy2Disk.sh -i /dev/sdb
+
+# 3. Copiar ISOs a la partición de datos
+mount /dev/sdb1 /mnt
+cp *.iso /mnt/
+umount /mnt
+Resolución de problemas
+Error: "No space left on device"
+bash
+# Verificar tamaño del USB vs ISO
+sudo fdisk -l /dev/sdb
+stat -c%s archivo.iso
+
+# Solución: USB más grande o ISO más pequeña
+Error: "Permission denied"
+bash
+# Ejecutar con sudo
+sudo dd if=archivo.iso of=/dev/sdb bs=4M
+
+# O cambiar permisos (no recomendado)
+sudo chmod 666 /dev/sdb
+El USB no aparece al arrancar
+bash
+# 1. Verificar modo de arranque (UEFI vs Legacy)
+# 2. Probar diferentes puertos USB
+# 3. Verificar que la ISO sea booteable
+# 4. Regrabar el USB
+
+# Probar con otro programa
+sudo apt install mkusb
+sudo mkusb archivo.iso
+Recuperar USB después de error
+bash
+# Eliminar tabla de particiones
+sudo wipefs -a /dev/sdb
+
+# Crear nueva partición
+sudo fdisk /dev/sdb
+# Presionar: n → p → 1 → Enter → Enter → w
+
+# Formatear
+sudo mkfs.vfat /dev/sdb1
+Comparación de métodos
+Método	Facilidad	Velocidad	Verificación	Recomendado para
+dd	Media	Alta	Manual	Usuarios avanzados
+Etcher	Alta	Alta	Automática	Todos los usuarios
+UNetbootin	Media	Media	Parcial	Distros antiguas
+Ventoy	Alta	Alta	No	Múltiples ISOs
+Consejos y mejores prácticas
+Siempre verificar el dispositivo
+
+bash
+# ¡No escribir en el disco del sistema!
+lsblk
+# Confirmar que es el USB (tamaño correcto)
+Usar USB 3.0 o superior
+
+Mayor velocidad de escritura
+
+Más compatible con UEFI
+
+Formatear USB antes si tiene problemas
+
+bash
+sudo mkfs.vfat /dev/sdb1
+Probar el USB antes de usarlo
+
+bash
+# Con qemu (requiere instalación)
+sudo apt install qemu-kvm
+qemu-system-x86_64 -hda /dev/sdb
+Tener ISOs verificadas
+
+bash
+# Descargar desde sitios oficiales
+# Verificar checksum SHA256
+sha256sum archivo.iso
+Comandos rápidos de referencia
+bash
+# Comando más común
+sudo dd bs=4M if=archivo.iso of=/dev/sdX status=progress conv=fsync
+
+# Con verificación
+sudo dd if=archivo.iso of=/dev/sdX bs=4M status=progress && sync
+
+# Cancelar proceso dd en ejecución
+# Presionar Ctrl+Alt+T en otra terminal
+sudo pkill -9 dd
+
+# Ver progreso de dd en ejecución
+sudo kill -USR1 $(pgrep ^dd)

@@ -1,0 +1,375 @@
+¿que hacer despues de instalar ubuntu?
+1-activar livepatch para seguridad del equipo.
+2-en software y actualizaciones, en el apartado de otro software marcar la casilla de 'Socios de Canonical'.
+3-iniciar aplicacion Actualizacion de Software
+4-posibles programas para instalacion:
+-spotify
+-filezilla
+-teams
+-slack
+-visual studio code
+-netbeans
+-eclipse
+-remmina
+-tor
+-libreOffice
+-postman
+-thunderbird
+-sublime text
+-notepad++
+-keepassXc
+-powershell
+-brackets	
+-onedrive = sudo apt-get install onedrive, (onedrive, onedrive --synchronize)
+-vim = sudo apt install vim
+-git= sudo apt install git
+-locate = sudo apt install mlocate
+
+sudo date --set "2020-08-11 23:06" = para establecer la fecha.
+
+notas Rapidas:
+Unix es multiusuario.
+
+¿que es ka terminal?
+La terminal es un pequeño programa que recibe nuestras ordenes de una forma que nos sea medianamente comoda,
+las traduce a algo que la computadora pueda comprender y en conjunto con el S.O ejecuta esas intrucciones y muestra ese resultado. 
+todo esto sucede en un entorno que se conoce como interface de texto.
+
+¿porque utilizar la terminal en vez de un entorno grafico?
+Por la eficiencia, ya que lo que se puede hacer en un entorno grafico lo podemos realizar de manera mas rapida y eficiente.
+La terminal ayuda a automatizar tareas que amenudo son repetitivas.
+
+los comandos - sintaxis general:
+*Nombre de un programa.
+*Parametros.
+*Modificadores.
+
+esquema general de como se ejecuta un comando.
+comando -flag1 -flag2 arg1 arg2
+flag=bandera
+
+diferencia entre parametros y modificadores:
+Los modificadores alteran lo que el programa va a hacer.
+Los parametros simplemente son informacion adicional para la ejecucion del programa.
+
+comandos:
+| = pipe(paip) le dice a la terminal que queremos usar la salida del comando de la izquierda como entrada al comando de la derecha.
+wc = (word count) permite realizar diferentes conteos, ya sea por palabras, caracteres o saltos de lineas. 
+& (al final) = mientras el proceso se ejecuta podemos seguir trabajando.
+
+date = mostrar la fecha de hoy.
+
+echo "anesoftware" = para imprimir un mensaje en la pantalla.
+
+man date = manual del comando ingresado.
+
+history = para ver todos los comandos que he escrito.
+!491 para ejecutar el comando que se encuentra en el historial con el numero 491.
+
+ls = para ver los archivos que tengo en un directorio - (Listar archivos).
+
+ls -a = para ver los archivos, incluyendo los archivos ocultos en un directorio.
+
+ls -l = para ver (usuario,grupo,permisos,tamaño,fecha,hora de creacion) en un directorio.
+
+ls -lh = muestra la misma informacion que ls -l pero con las unidades de tamaño en KB, MB.
+
+ls -R = muestra el conenido de todos los subdirectorios de forma recursiva.
+
+ls -S = ordena los resultados por tamaño de archivo.
+
+ls -t = ordena los archivos por fecha de modificacion.
+
+ls -x = ordena primero por nombre y despues por extension.
+
+ls -X = ordena primero por extension y despues por nombre.
+
+pwd = mostrar directorio actual( pwd = print working directory).
+
+cd /home = para cambiar de directorio.
+
+cd ~ = para ir directamente a mi home.
+
+cd - = para ir a el ultimo directorio visitado.
+
+mkdir 'Nueva Carpeta' = para crear un directorio(carpeta).
+
+cp prueba.txt /home/documentos/ = para copiar un archivo.
+
+rm prueba.txt = para borrar un archivo.
+
+rmdir 'Nueva Carpeta' = para borrar un directorio(carpeta).
+
+mv ../prueba.txt . = para mover un archivo, en este caso de la carpeta anterior a la actual.
+
+touch archivo.txt = para crear archivos.
+
+fg = para traer el proceso a el foreground.(primer plano).
+
+herramientas para ver procesos en ejecucion:
+ps = (process status) procesos que estoy ejecutando yo mismo.
+ps ax = para ver todos los procesos del sistema.
+top = para listar los procesos en tiempo real y ver un poco mas de informacion acerca del equipo (q para salir).
+
+herramientas para detener procesos en ejecucion:
+kill -9 0001 = para matar un proceso(-9 = matar inmediatamente , 0001 = PID).
+killall firefox = para matar con tan solo conocer el nombre del proceso que queremos matar.
+
+utilidades interactivas:
+Programas que procesan texto en tiempo real(vim, nano).
+Ejemplos:
+nano prueba.txt
+vim prueba.txt
+
+utilidades batch:
+Programas que procesan texto y emiten el resultado(cat, head, tail).
+Ejemplos:
+cat prueba.txt = mostrar todo el contenido de un archivo.
+head prueba.txt = para ver las primeras lineas del archivo.
+head -n 5 prueba.txt = para ver x numero de las primeras lineas del archivo.
+tail prueba.txt = para ver las ultimas lineas del archivo.
+
+nota importante para directorios:
+El . y .. son archivos virtuales, tambien conocidos como punteros a directorios.
+. = Hace referencia al directorio actual.
+.. = Hace referencia al directorio padre(directorio anterior).
+
+busqueda de archivos:
+*locate = permite hacer una busqueda en todo el sistema de archivos simplemente diciendo el nombre del archivo.(ejecutar antes sudo updatedb).
+*whereis = para ubicar archivos binarios.
+*find = buscar dentro de un arbol de directorios.
+Ejemplos:
+locate prueba.txt = para localizar la ubicacion de un archivo con el nombre de prueba.txt
+whereis echo = para localizar la ubicacion binaria del comando echo.
+
+find . -user emmanuel -perm 644 = 
+find . -type f = para buscara archivos de tipo files.
+find . -mtime +7 -exec cp {} /home \; = buscar archivos modificados hace mas de 7 dias y que se copien a un directorio.
+
+comprimir y descomprimir archivos:
+gzip nuevo.txt = para comprimir un archivo.
+gzip -d nuevo.txt = para descomprimir un archivo
+
+agrupar y desagrupar archivos:
+tar cf nuevonombre.tar home/* = para agrupar todo lo que esta en /home.
+tar tf nuevonombre.tar = para visualizar su contenido. 
+tar xf nuevonombre.tar = para desagrupar su contenido.
+tar czf nuevonombre.tgz home/* = agrupar y comprimir utilizando gzip.
+tar xzf nuevonombre.tgz = para desagrupar y descomprimir.
+
+utilidades batch avanzadas
+grep = busqueda por expresiones regulares dentro de archivos.
+sed = Tratamiento de flujos de caracteres(stream editor).
+awk = Tratamiento de texto delimitado.
+Ejemplos:
+grep emmanuel nombres.txt = para buscar una cadena de caracteres en un archivo.
+grep -i emmanuel nombres.txt = para buscar una cadena de caracteres sin importar si esta en mayuscula o minuscula.
+
+sed 's/emmanuel/natalia/g' nombres.txt = para sustiruir emmanuel por natalia en el archivo nombres.txt sin alterar dicho archivo.('s = sustituir, g' = globalmente).
+sed '$d' nombres.txt = para borrar la ultima linea del archivo.
+
+awk -F ';' '{ print $1 }' nombres.txt = para imprimir la primera columna del archivo nombres.txt (; = delimitador). 
+
+interaccion via http:
+-comandos HTTP
+*curl = para hacer pedidos crudos, se pide a un servidor se recibe la respuesta http y la rta es mostrada en pantalla.
+*wget = realiza descargas desde servidores http
+
+utilidades de cli (command line interface):
+*Comodines
+*Combinaciones de teclas
+*Sustitucion de comandos
+
+combinacion de teclas en la terminal:
+ctrl + shift + r = Para buscar entre los comandos que ya he escrito anteriormente.
+ctrl + z = para enviar el proceso a el background.(segundo plano).
+ctrl + c = para interrumpir un proceso.
+ctrl + l = equivale a teclear un clear en la consola.
+
+organizacion de informacion:
+*Archivo
+*Directorio
+
+arbol de directorios estructura:
+texmf
+-----doc
+-----fonts
+-----source
+-----text
+---------generic
+---------latex
+---------plain
+-----textdoc
+
+como identificar archivos:
+*Nombre
+*Ubicacion
+/directorio/subdirectorio/archivo = path
+
+nota basica para trabajar con archivos:
+Dentro de un sistema de archivos no pueden existir 2 archivos que tengan el mismo nombre completo.
+
+tipos de archivo:
+*Binarios
+*De texto (aunque todo en la computadora esta guardado como binario).
+
+archivos binarios:
+Se entiende por archivo binario aquel que esta pensado y escrito de una manera para que sea interpretado por una computadora.(dificil de entender para el humano).
+*Programas ejecutables
+*Archivos de datos
+
+archivos de texto:
+Son archivos que tambien son binarios, sin embargo, son legibles con algun editor de texto.(Contenido legible por humanos).
+
+procesamiento de datos:
+Datos-->proceso-->informacion
+teclado-->proceso-->pantalla (perifericos)
+
+flujos estandar
+*Entrada
+*Salida
+*Error
+
+redireccion:
+cambiar la entrada estandar del teclado hacia un archivo.
+
+mysql -h 127.0.0.1 -u root -p1234 < crearUsuarios.sql
+< = para cambiar la entrada.
+
+ls -l > lista.txt
+> = para crear un archivo con el resultado.
+
+ls -l >> lista.txt
+>> para añadir el resultado a un archivo. 
+
+usuarios en archivos:
+*Dueño = Persona que ha creado el archivo.
+*Grupo = grupo de usuarios que pueden accederlo.
+*Otros = que se le permite hacer a cualquier otro usuario que no sea el dueño, ni perteneciente al grupo que esta asociado el archivo.
+
+operaciones sobre un archivo:
+*Lectura
+*Escritura
+*Ejecucion
+
+ls -l = para ver los permisos de un archivo o directorio.
+drwxr-xr-x =  se vera algo asi.
+
+d = (directory) indica que es un directorio
+r = (read) indica que tiene permiso de lectura.
+w = (write) indica que tiene permiso de escritura.
+x = (execute) indica que tiene permiso de ejecucion.
+- = indica que no tiene dicho permiso.
+
+permisos en archivos:
+chmod = cambiar individualmente los permisos (cambiar modo del archivo).
+chown = cambia quien es el usuario quien es el propietario del archivo.
+chgrp = cambia quien es el grupo de usuarios que pueden acceder al archivo.
+Ejemplos:
+chmod 760 nuevo.txt = propietario 7 (rwx), grupo 6 (rw-), otros 0 (---)  
+chown emmanuel nuevo.txt = el usuario emmanuel es el nuevo propietario
+chgrp emmanuel nuevo.txt = el nuevo grupo al que pertenece este archivo es emmanuel.
+
+remover permisos en archivos:
+Notacion textual:
+chmod o-w nuevo.txt = para remover el permiso de escritura a los otros usuarios, en el archivo nuevo.txt
+chmod +x nuevo.txt = para agregar el permiso de ejecutar a todos los usuarios, en el archivo nuevo.txt
+
+notacion binaria:
+--------------------------        
+| r | w | x |valor binario|
+--------------------------
+| 0 | 0 | 0 |      0      |
+--------------------------
+| 1 | 0 | 0 |      4      |
+--------------------------
+--------------------------
+| 1 | 1 | 0 |      6      | 
+--------------------------
+--------------------------
+| 1 | 1 | 1 |      7      | 
+--------------------------
+
+manejo de paquetes:
+*Paquetes de software
+*Administradores de paquetes 
+
+paquetes binarios:
+*apt = utilizado en distribuciones de linux basadas en debian.
+*zypper = utilizado en distribuciones sunset.
+*rpm = universal y mas robusto.
+
+paquetes de lenguajes:
+*pip = es utilizado en python.
+*composer = php.
+*npm = nodejs.
+
+otros manejadores de paquetes:
+*conda
+*homebrew
+
+¿como enviar emails desde la terminarl?
+
+variables de entorno:
+Es una definicion global a la que todos los procesos tienen acceso s.o(la terminal)
+echo $PATH = en esta variable se almacenan todas las rutas en la que la terminal tiene que ir a buscar los archivos que pueden ser ejecutables.
+nano /etc/environment = para ver la definicion del PATH.
+
+automatizacion de tareas:
+¿que es el shell o bash?
+El shell o bash es un interprete de comandos y un lenguaje de programacion.
+-scripting bash
+
+progrmacion de tareas:
+*at
+*cron
+
+at now +2 min = que se ejecute algo en 2 min
+echo "Hola mundo" + enter (control + d para salir de at).
+
+crontab -e = para ver toda la programacion de tareas.
+
+esquema cron:
+*Minuto
+*Hora
+*Dia del mes 
+*En cual mes
+*Dia de la semana
+*Comando a ejecutar 
+
+Ejemplo 1:
+#!/bin/bash
+
+mkdir /tmp/temporalPrueba
+tar czf /tmp/carpetax/ejemplo.'date +%F' .tgz /usr/share
+mv tmp/carpetax/ejemplo.'date +%F' .tgz /home/usuario
+rmdir /tmp/temporalPrueba
+
+ejemplo 2:
+#!/bin/bash
+
+/root/script1.sh
+/root/script2.sh
+/root/script3.sh
+
+ejemplo 3:
+#!/bin/bash
+
+NEW_DIR = nuevodir
+
+if [ ! -d "/root/$NEW_DIR"];then
+	mkdir /root/$NEW_DIR
+fi
+
+cp prueba.txt /root/$NEW_DIR
+echo "'date': Todo listo jefe!"
+
+¿como crear un alias?
+alias actualizarSudo='sudo apt-get update && sudo apt-get upgrade -y'
+
+¿como configurar la hora en linux?
+sudo apt-get install ntp
+sudo nano /etc/ntp.conf
+para buscar el server debemos ir a www.pool.ntp.org/zone/co
+/etc/init.d/ntp restart
+date

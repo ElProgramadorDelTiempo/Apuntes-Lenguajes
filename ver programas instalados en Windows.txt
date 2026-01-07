@@ -1,0 +1,492 @@
+Guía Completa: Ver Programas Instalados en Windows
+Índice
+Métodos Gráficos (GUI)
+
+Usando PowerShell (Recomendado)
+
+Usando WMIC desde CMD
+
+Usando el Registro de Windows
+
+Scripts Automatizados
+
+Herramientas de Terceros
+
+Comparativa y Recomendaciones
+
+1. Métodos Gráficos (GUI)
+Método 1: Programas y Características
+bash
+# Abrir desde ejecutar (Win + R)
+appwiz.cpl
+
+# O desde PowerShell/CMD
+control appwiz.cpl
+Método 2: Configuración de Windows
+text
+1. Presionar Win + I (Abrir Configuración)
+2. Ir a: Aplicaciones → Aplicaciones y características
+Método 3: Carpeta de Aplicaciones
+bash
+# Abrir carpeta de aplicaciones instaladas
+shell:AppsFolder
+
+# Desde ejecutar (Win + R)
+explorer shell:AppsFolder
+Método 4: Panel de Control Clásico
+bash
+# Abrir Panel de Control
+control panel
+
+# Navegar: Panel de Control → Programas → Programas y características
+2. Usando PowerShell (Recomendado)
+Método 1: Desde el Registro (Más rápido y completo)
+powershell
+# Obtener programas de 64 bits y 32 bits
+Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                 HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+Select-Object DisplayName, DisplayVersion, Publisher, InstallDate |
+Sort-Object DisplayName |
+Format-Table -AutoSize
+
+# Con información adicional
+$programas = Get-ItemProperty @(
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"  # Usuario actual
+) -ErrorAction SilentlyContinue
+
+$programas | Where-Object {$_.DisplayName} |
+Select-Object DisplayName, DisplayVersion, Publisher, @{
+    Name="Fecha"; Expression={
+        if($_.InstallDate) {
+            try { [datetime]::ParseExact($_.InstallDate, "yyyyMMdd", $null) }
+            catch { $_.InstallDate }
+        }
+    }
+} | Sort-Object DisplayName
+Método 2: Usando Get-Package (PowerShell 5.1+)
+powershell
+# Listar todos los paquetes
+Get-Package | Select-Object Name, Version, ProviderName | Sort-Object Name
+
+# Filtrar por proveedor
+Get-Package | Where-Object {$_.ProviderName -eq "Programs"} |
+Select-Object Name, Version | Sort-Object Name
+
+# Contar programas
+(Get-Package | Where-Object {$_.ProviderName -eq "Programs"}).Count
+Método 3: Get-WmiObject (Alternativa)
+powershell
+# Método tradicional (más lento)
+Get-WmiObject -Class Win32_Product |
+Select-Object Name, Version, Vendor |
+Sort-Object Name |
+Format-Table -AutoSize
+
+# Con filtros
+Get-WmiObject -Class Win32_Product |
+Where-Object {$_.Name -like "*Microsoft*"} |
+Select-Object Name, Version, InstallDate
+3. Usando WMIC desde CMD
+Comandos Básicos
+cmd
+# Listar todos los programas
+wmic product get name,version
+
+# Guardar en archivo
+wmic product get name,version > C:\programas.txt
+
+# Con más información
+wmic product get name,version,vendor,installdate
+
+# Formatear como tabla
+wmic product get name,version /format:table
+Comandos Avanzados
+cmd
+# Filtrar por nombre
+wmic product where "name like '%Adobe%'" get name,version
+
+# Filtrar por editor
+wmic product where "vendor like '%Microsoft%'" get name,version
+
+# Ordenar por nombre
+wmic product get name,version | sort
+
+# Contar programas
+wmic product get name | find /c /v ""
+
+# Exportar a CSV
+wmic product get name,version,vendor /format:csv > C:\programas.csv
+
+# Información detallada de un programa específico
+wmic product where name="Google Chrome" get *
+Script Batch Completo
+batch
+@echo off
+chcp 65001 >nul
+setlocal enabledelayedexpansion
+
+echo ========================================
+echo    LISTA DE PROGRAMAS INSTALADOS
+echo ========================================
+echo.
+
+REM Crear carpeta para resultados
+set "FECHA=%date:/=-%_%time::=-%"
+set "FECHA=%FECHA: =_%"
+set "CARPETA=Programas_%FECHA%"
+mkdir "%CARPETA%" 2>nul
+
+echo [i] Obteniendo lista de programas...
+echo.
+
+REM Obtener lista con WMIC
+set "ARCHIVO_TXT=%CARPETA%\programas.txt"
+set "ARCHIVO_CSV=%CARPETA%\programas.csv"
+
+echo NOMBRE,VERSION,EDITOR,FECHA_INSTALACION > "%ARCHIVO_CSV%"
+wmic product get name,version,vendor,installdate /format:csv | findstr /v /c:"Node" >> "%ARCHIVO_CSV%"
+
+REM Crear versión legible
+echo LISTA DE PROGRAMAS INSTALADOS > "%ARCHIVO_TXT%"
+echo ============================ >> "%ARCHIVO_TXT%"
+echo Fecha: %date% %time% >> "%ARCHIVO_TXT%"
+echo. >> "%ARCHIVO_TXT%"
+
+wmic product get name,version | findstr /v /c:"Name" | findstr /v /c:"---" > "%CARPETA%\temp.txt"
+
+set "contador=0"
+for /f "tokens=1,* delims=	" %%a in ('type "%CARPETA%\temp.txt"') do (
+    if not "%%a"=="" (
+        set /a contador+=1
+        echo [!contador!] %%a (%%b) >> "%ARCHIVO_TXT%"
+        echo [!contador!] %%a (%%b)
+    )
+)
+
+del "%CARPETA%\temp.txt"
+
+echo.
+echo [✓] Proceso completado
+echo [✓] Programas encontrados: %contador%
+echo [✓] Archivos guardados en: %CARPETA%
+echo.
+
+REM Abrir carpeta
+explorer "%CARPETA%"
+4. Usando el Registro de Windows
+Navegación Manual en el Registro
+bash
+# Abrir Editor del Registro
+regedit
+
+# Rutas importantes:
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall
+HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall
+Exportar desde Registro
+cmd
+# Exportar clave del registro
+reg export "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" programas.reg
+
+# Exportar a texto
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s > programas_reg.txt
+Script de Registro para Consulta Rápida
+batch
+@echo off
+:: Script para extraer programas del registro
+setlocal enabledelayedexpansion
+
+echo Extrayendo programas instalados...
+echo.
+
+set "output=programas_instalados_%date:~-4,4%%date:~-7,2%%date:~-10,2%.txt"
+echo Programa | Versión | Editor > "%output%"
+echo ---------|---------|-------- >> "%output%"
+
+:: Programas de 64 bits
+for /f "tokens=2,*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v DisplayName 2^>nul') do (
+    set "nombre=%%b"
+    if not "!nombre!"=="" (
+        :: Obtener versión
+        for /f "tokens=3" %%v in ('reg query "%%a" /v DisplayVersion 2^>nul ^| findstr DisplayVersion') do set "version=%%v"
+        :: Obtener editor
+        for /f "tokens=3" %%p in ('reg query "%%a" /v Publisher 2^>nul ^| findstr Publisher') do set "editor=%%p"
+        
+        echo !nombre! | !version! | !editor! >> "%output%"
+    )
+)
+
+echo.
+echo Lista guardada en: %output%
+start notepad "%output%"
+5. Scripts Automatizados
+Script PowerShell Completo
+powershell
+<#
+.SYNOPSIS
+    Exporta lista completa de programas instalados en Windows
+.DESCRIPTION
+    Este script obtiene todos los programas instalados del registro,
+    incluyendo programas de 32 y 64 bits, y los exporta a CSV y TXT
+.EXAMPLE
+    .\Get-InstalledPrograms.ps1
+    .\Get-InstalledPrograms.ps1 -ExportPath "C:\Informes"
+#>
+
+[CmdletBinding()]
+param(
+    [Parameter()]
+    [string]$ExportPath = "$env:USERPROFILE\Desktop\Programas_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+)
+
+# Crear directorio de exportación
+if (-not (Test-Path $ExportPath)) {
+    New-Item -ItemType Directory -Path $ExportPath -Force | Out-Null
+}
+
+# Rutas del registro a consultar
+$registryPaths = @(
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+Write-Host "Obteniendo programas instalados..." -ForegroundColor Cyan
+
+# Obtener datos del registro
+$programs = Get-ItemProperty $registryPaths -ErrorAction SilentlyContinue |
+    Where-Object { $_.DisplayName } |
+    Select-Object @{Name="Programa"; Expression={$_.DisplayName}},
+                  @{Name="Versión"; Expression={$_.DisplayVersion}},
+                  @{Name="Editor"; Expression={$_.Publisher}},
+                  @{Name="Fecha Instalación"; Expression={
+                      if ($_.InstallDate) {
+                          try {
+                              [datetime]::ParseExact($_.InstallDate, "yyyyMMdd", $null)
+                          } catch {
+                              $_.InstallDate
+                          }
+                      }
+                  }},
+                  @{Name="Tamaño (MB)"; Expression={
+                      if ($_.EstimatedSize) {
+                          [math]::Round([double]$_.EstimatedSize / 1024, 2)
+                      }
+                  }},
+                  @{Name="Arquitectura"; Expression={
+                      if ($_.PSPath -like "*WOW6432Node*") { "32-bit" } else { "64-bit" }
+                  }},
+                  @{Name="Ruta Instalación"; Expression={$_.InstallLocation}} |
+    Sort-Object Programa
+
+# Exportar a CSV
+$csvFile = Join-Path $ExportPath "programas_instalados.csv"
+$programs | Export-Csv -Path $csvFile -NoTypeInformation -Encoding UTF8
+
+# Exportar a TXT (formato legible)
+$txtFile = Join-Path $ExportPath "programas_instalados.txt"
+"LISTA DE PROGRAMAS INSTALADOS" | Out-File $txtFile -Encoding UTF8
+"=============================" | Out-File $txtFile -Encoding UTF8 -Append
+"Fecha: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File $txtFile -Encoding UTF8 -Append
+"Sistema: $env:COMPUTERNAME" | Out-File $txtFile -Encoding UTF8 -Append
+"Usuario: $env:USERNAME" | Out-File $txtFile -Encoding UTF8 -Append
+"" | Out-File $txtFile -Encoding UTF8 -Append
+
+$counter = 1
+foreach ($program in $programs) {
+    $line = "$counter. $($program.Programa)"
+    if ($program.Versión) { $line += " v$($program.Versión)" }
+    if ($program.Editor) { $line += " [$($program.Editor)]" }
+    $line | Out-File $txtFile -Encoding UTF8 -Append
+    $counter++
+}
+
+# Estadísticas
+$totalPrograms = $programs.Count
+$bit64 = ($programs | Where-Object {$_.Arquitectura -eq "64-bit"}).Count
+$bit32 = ($programs | Where-Object {$_.Arquitectura -eq "32-bit"}).Count
+
+# Mostrar resumen
+Write-Host "`n=== RESUMEN ===" -ForegroundColor Green
+Write-Host "Total de programas: $totalPrograms" -ForegroundColor Cyan
+Write-Host "Programas 64-bit: $bit64" -ForegroundColor Cyan
+Write-Host "Programas 32-bit: $bit32" -ForegroundColor Cyan
+Write-Host "`nArchivos exportados:" -ForegroundColor Yellow
+Write-Host "  CSV: $csvFile" -ForegroundColor Gray
+Write-Host "  TXT: $txtFile" -ForegroundColor Gray
+
+# Mostrar top 10 programas
+Write-Host "`n=== TOP 10 PROGRAMAS ===" -ForegroundColor Green
+$programs | Select-Object -First 10 | Format-Table -AutoSize
+
+# Abrir carpeta de exportación
+Start-Process "explorer.exe" -ArgumentList $ExportPath
+Script para Comparar Instalaciones
+powershell
+# Script para comparar programas instalados entre dos equipos
+$equipo1 = Invoke-Command -ComputerName "EQUIPO1" -ScriptBlock {
+    Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                     HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+    Where-Object {$_.DisplayName} |
+    Select-Object DisplayName, DisplayVersion
+}
+
+$equipo2 = Invoke-Command -ComputerName "EQUIPO2" -ScriptBlock {
+    Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                     HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+    Where-Object {$_.DisplayName} |
+    Select-Object DisplayName, DisplayVersion
+}
+
+# Programas solo en Equipo1
+$soloEnEquipo1 = Compare-Object $equipo1 $equipo2 -Property DisplayName -PassThru |
+    Where-Object {$_.SideIndicator -eq "<="}
+
+# Programas solo en Equipo2
+$soloEnEquipo2 = Compare-Object $equipo1 $equipo2 -Property DisplayName -PassThru |
+    Where-Object {$_.SideIndicator -eq "=>"}
+
+Write-Host "Programas solo en EQUIPO1:" -ForegroundColor Yellow
+$soloEnEquipo1 | Format-Table -AutoSize
+
+Write-Host "`nProgramas solo en EQUIPO2:" -ForegroundColor Yellow
+$soloEnEquipo2 | Format-Table -AutoSize
+6. Herramientas de Terceros
+1. Geek Uninstaller (Gratuito)
+Portátil, no requiere instalación
+
+Elimina programas completamente
+
+Fuerza eliminación de programas rebeldes
+
+Descarga: https://geekuninstaller.com/
+
+2. Revo Uninstaller
+Elimina programas y archivos residuales
+
+Múltiples modos de desinstalación
+
+Limpiador de archivos temporales
+
+Versión gratuita y profesional
+
+3. BCUninstaller (Open Source)
+Gratuito y de código abierto
+
+Interfaz de PowerShell integrada
+
+Exporta lista a varios formatos
+
+GitHub: https://github.com/Klocman/Bulk-Crap-Uninstaller
+
+4. Patch My PC
+Actualiza múltiples programas a la vez
+
+Detalla versión instalada vs. última versión
+
+Gratuito para uso personal
+
+Sitio: https://patchmypc.com/
+
+5. Belarc Advisor
+Perfil completo del sistema
+
+Lista software + licencias
+
+Detalles de seguridad
+
+Gratuito para uso personal
+
+7. Comparativa y Recomendaciones
+Método	Velocidad	Completo	Facilidad	Recomendado para
+PowerShell (Registro)	⭐⭐⭐⭐⭐	⭐⭐⭐⭐⭐	⭐⭐⭐⭐	Administradores, scripting
+WMIC	⭐⭐⭐	⭐⭐⭐⭐	⭐⭐⭐	CMD, batch scripts
+appwiz.cpl	⭐⭐⭐⭐	⭐⭐⭐	⭐⭐⭐⭐⭐	Usuarios finales
+Get-Package	⭐⭐⭐	⭐⭐	⭐⭐⭐⭐	PowerShell 5.1+
+Herramientas 3ros	⭐⭐⭐⭐	⭐⭐⭐⭐⭐	⭐⭐⭐⭐⭐	Limpieza avanzada
+Recomendaciones por Caso de Uso:
+Para Usuarios Finales
+bash
+# Método más simple
+1. Presionar Win + R
+2. Escribir: appwiz.cpl
+3. Enter
+Para Administradores de Sistemas
+powershell
+# Script PowerShell completo
+Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                 HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+Where-Object {$_.DisplayName} |
+Select-Object DisplayName, DisplayVersion, Publisher |
+Export-Csv "\\servidor\inventario.csv" -NoTypeInformation
+Para Scripting/Batch
+batch
+# Archivo batch simple
+wmic product get name,version > C:\inventario.txt
+Para Auditoría de Seguridad
+powershell
+# Ver programas vulnerables/antiguos
+$programas = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                               HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*
+
+$programas | Where-Object {$_.DisplayName -and $_.DisplayVersion} |
+Select-Object DisplayName, DisplayVersion, Publisher |
+Where-Object {
+    $_.DisplayName -match "(Java|Flash|Reader|Chrome|Firefox)" -and
+    $_.DisplayVersion -lt "100.0"
+} | Format-Table -AutoSize
+Comandos Rápidos de Referencia
+powershell
+# PowerShell - Lista rápida
+gp 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | ? DisplayName | select DisplayName, DisplayVersion
+
+# PowerShell - Guardar lista
+gp 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | ? DisplayName | select DisplayName, DisplayVersion | Export-Csv programas.csv
+
+# CMD - Lista básica
+wmic product get name
+
+# CMD - Con versión
+wmic product get name,version
+
+# Abrir interfaz gráfica
+start appwiz.cpl
+Solución de Problemas Comunes
+Programas que no aparecen en la lista
+powershell
+# Verificar todas las rutas del registro
+$paths = @(
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    "HKLM:\Software\Classes\Installer\Products\*"
+)
+
+foreach ($path in $paths) {
+    Write-Host "`nBuscando en: $path" -ForegroundColor Yellow
+    Get-ItemProperty $path -ErrorAction SilentlyContinue |
+        Where-Object {$_.DisplayName} |
+        Select-Object DisplayName, DisplayVersion |
+        Format-Table -AutoSize
+}
+WMIC tarda mucho o no responde
+batch
+# Usar timeout y reintentos
+@echo off
+echo Obteniendo lista de programas...
+timeout /t 5 /nobreak >nul
+wmic product get name,version 2>nul || (
+    echo Reintentando...
+    wmic product get name,version
+)
+Exportar sin programas de Windows
+powershell
+# Filtrar programas de Microsoft
+Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                 HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+Where-Object {$_.DisplayName -and $_.Publisher -notlike "*Microsoft*"} |
+Select-Object DisplayName, DisplayVersion, Publisher |
+Sort-Object DisplayName |
+Export-Csv "programas_no_microsoft.csv" -NoTypeInformation

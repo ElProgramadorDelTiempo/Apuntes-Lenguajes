@@ -1,0 +1,728 @@
+Post-Instalación y Configuración
+Índice
+Actualización del Sistema
+
+Configuración de Repositorios
+
+Instalación de Software Esencial
+
+Configuración del Entorno Gráfico
+
+Configuración de Hardware
+
+Configuración de Red y Seguridad
+
+Herramientas de Desarrollo
+
+Personalización Avanzada
+
+Scripts de Automatización
+
+1. Actualización del Sistema
+Actualización completa del sistema
+bash
+# Actualizar lista de paquetes
+sudo apt update
+
+# Actualizar paquetes instalados
+sudo apt upgrade -y
+
+# Actualizar distribución (cuidado con versiones)
+sudo apt full-upgrade -y
+
+# Limpiar paquetes innecesarios
+sudo apt autoremove -y
+sudo apt autoclean
+
+# Verificar kernel actual
+uname -r
+
+# Actualizar herramientas de pentesting
+sudo apt update && sudo apt install kali-linux-default
+Configurar actualizaciones automáticas
+bash
+# Instalar herramientas de actualización automática
+sudo apt install unattended-upgrades apt-listchanges
+
+# Configurar actualizaciones automáticas
+sudo dpkg-reconfigure --priority=low unattended-upgrades
+
+# Verificar configuraciones
+sudo nano /etc/apt/apt.conf.d/50unattended-upgrades
+2. Configuración de Repositorios
+Verificar y editar sources.list
+bash
+# Ver repositorios actuales (sin comentarios)
+grep -v '#' /etc/apt/sources.list | sort -u
+
+# Ver repositorios activos con URLs
+sudo cat /etc/apt/sources.list
+
+# Editar repositorios
+sudo nano /etc/apt/sources.list
+
+# Configuración recomendada para sources.list:
+deb http://http.kali.org/kali kali-rolling main non-free contrib
+# deb-src http://http.kali.org/kali kali-rolling main non-free contrib
+
+# Agregar repositorios adicionales (si es necesario)
+echo "deb http://download.virtualbox.org/virtualbox/debian $(lsb_release -sc) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
+
+# Importar claves GPG de repositorios
+wget -q -O - https://www.virtualbox.org/download/oracle_vbox_2016.asc | sudo apt-key add -
+
+# Actualizar después de cambios
+sudo apt update
+Configurar mirror más rápido
+bash
+# Instalar herramienta para seleccionar mirror
+sudo apt install netselect-apt
+
+# Buscar mirror más rápido
+sudo netselect-apt
+
+# Usar mirror específico
+sudo nano /etc/apt/sources.list
+# Cambiar http.kali.org por mirror más rápido
+3. Instalación de Software Esencial
+Utilidades básicas del sistema
+bash
+# Gestor de contraseñas
+sudo apt install keepassxc
+
+# Visor de imágenes
+sudo apt install eog
+
+# Editor de texto por defecto
+sudo update-alternatives --config editor
+# o cambiar específicamente
+sudo select-editor
+
+# Herramientas de red
+sudo apt install net-tools traceroute whois dnsutils
+
+# Compresión y archivos
+sudo apt install p7zip-full rar unrar zip unzip
+
+# Herramientas de terminal
+sudo apt install htop neofetch tmux screen git curl wget
+
+# Codecs multimedia
+sudo apt install ffmpeg vlc
+
+# Navegadores adicionales
+sudo apt install firefox-esr chromium
+Herramientas de seguridad adicionales
+bash
+# VPN y proxies
+sudo apt install openvpn proxychains4 tor
+
+# Análisis de vulnerabilidades
+sudo apt install nikto sqlmap metasploit-framework
+
+# Análisis de red
+sudo apt install wireshark tcpdump nmap
+
+# Herramientas wireless
+sudo apt install aircrack-ng reaver wifite
+
+# Forense digital
+sudo apt install autopsy sleuthkit forensics-all
+4. Configuración del Entorno Gráfico
+Cambiar fondo de pantalla de login
+bash
+# Ver gestor de display instalado
+sudo cat /etc/X11/default-display-manager
+# Debería mostrar: /usr/sbin/lightdm
+
+# Verificar si lightdm está instalado
+sudo systemctl status lightdm
+
+# Editar configuración de lightdm
+sudo nano /etc/lightdm/lightdm-gtk-greeter.conf
+
+# Buscar y modificar la línea:
+# background = /usr/share/desktop-base/kali-theme/login/background.png
+
+# Ejemplo con imagen personalizada:
+background = /usr/share/backgrounds/custom-login.jpg
+
+# Crear directorio para fondos personalizados
+sudo mkdir -p /usr/share/backgrounds
+sudo cp ~/Imágenes/mi-fondo.jpg /usr/share/backgrounds/custom-login.jpg
+
+# Reiniciar lightdm para aplicar cambios
+sudo systemctl restart lightdm
+# o
+sudo dpkg-reconfigure lightdm
+Personalizar escritorio Xfce (por defecto en Kali)
+bash
+# Instalar temas adicionales
+sudo apt install arc-theme papirus-icon-theme
+
+# Configurar tema
+xfconf-query -c xsettings -p /Net/ThemeName -s "Arc-Dark"
+xfconf-query -c xsettings -p /Net/IconThemeName -s "Papirus-Dark"
+
+# Configurar fondo de escritorio
+xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s /ruta/a/tu/fondo.jpg
+
+# Personalizar panel
+# Botón derecho en panel → Panel → Preferencias del Panel
+Instalar otros entornos de escritorio
+bash
+# KDE Plasma
+sudo apt install kali-desktop-kde
+
+# GNOME
+sudo apt install kali-desktop-gnome
+
+# LXDE
+sudo apt install kali-desktop-lxde
+
+# Cambiar entorno de escritorio
+sudo update-alternatives --config x-session-manager
+5. Configuración de Hardware
+Activar Bluetooth
+bash
+# Ver estado del servicio
+sudo systemctl status bluetooth
+
+# Activar servicio
+sudo systemctl start bluetooth
+sudo systemctl enable bluetooth  # Para iniciar automáticamente
+
+# Ver dispositivos bluetooth
+bluetoothctl
+# Comandos dentro de bluetoothctl:
+#   power on
+#   agent on
+#   default-agent
+#   scan on
+#   pair [MAC]
+#   connect [MAC]
+#   trust [MAC]
+
+# Alternativa con comandos directos
+sudo hciconfig hci0 up
+sudo bluetoothctl power on
+Configurar tarjeta de red WiFi
+bash
+# Ver interfaces de red
+ip a
+iwconfig
+
+# Ver controladores WiFi
+lspci -k | grep -A 2 -i network
+lsusb
+
+# Instalar controladores adicionales
+sudo apt install firmware-linux firmware-linux-nonfree
+
+# Para tarjetas específicas (ej: Realtek)
+sudo apt install realtek-rtl88xxau-dkms
+Configurar impresoras
+bash
+# Instalar CUPS
+sudo apt install cups cups-client
+
+# Habilitar servicio
+sudo systemctl start cups
+sudo systemctl enable cups
+
+# Configurar desde navegador
+# http://localhost:631
+6. Configuración de Red y Seguridad
+Configurar proxy
+bash
+# Configurar proxy temporal
+export http_proxy="http://usuario:contraseña@proxy:puerto"
+export https_proxy="http://usuario:contraseña@proxy:puerto"
+
+# Configurar proxy permanente
+sudo nano /etc/environment
+# Agregar:
+# http_proxy="http://proxy:puerto"
+# https_proxy="http://proxy:puerto"
+# ftp_proxy="ftp://proxy:puerto"
+# no_proxy="localhost,127.0.0.1"
+
+# Configurar apt para usar proxy
+sudo nano /etc/apt/apt.conf.d/80proxy
+# Agregar:
+# Acquire::http::Proxy "http://proxy:puerto";
+# Acquire::https::Proxy "http://proxy:puerto";
+Configurar firewall
+bash
+# Verificar estado
+sudo ufw status
+
+# Habilitar firewall
+sudo ufw enable
+
+# Reglas básicas
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Ver reglas
+sudo ufw status numbered
+
+# Eliminar regla
+sudo ufw delete [número]
+Configurar SSH
+bash
+# Instalar servidor SSH
+sudo apt install openssh-server
+
+# Configurar SSH
+sudo nano /etc/ssh/sshd_config
+
+# Recomendaciones de seguridad:
+# Port 2222  # Cambiar puerto
+# PermitRootLogin no
+# PasswordAuthentication no
+# PubkeyAuthentication yes
+
+# Reiniciar servicio
+sudo systemctl restart ssh
+
+# Generar clave SSH
+ssh-keygen -t rsa -b 4096
+7. Herramientas de Desarrollo
+Instalar Eclipse (Método completo)
+bash
+# 1. Descargar última versión desde eclipse.org
+wget https://www.eclipse.org/downloads/download.php?file=/technology/epp/downloads/release/2023-09/R/eclipse-jee-2023-09-R-linux-gtk-x86_64.tar.gz
+
+# 2. Extraer en /opt
+sudo tar -xzvf eclipse-jee-*.tar.gz -C /opt/
+
+# 3. Crear enlace simbólico
+sudo ln -s /opt/eclipse/eclipse /usr/local/bin/eclipse
+
+# 4. Crear archivo .desktop
+sudo nano /usr/share/applications/eclipse.desktop
+
+# Contenido:
+[Desktop Entry]
+Name=Eclipse IDE
+Type=Application
+Exec=/opt/eclipse/eclipse
+Terminal=false
+Icon=/opt/eclipse/icon.xpm
+Comment=Integrated Development Environment
+NoDisplay=false
+Categories=Development;IDE;
+Keywords=Java;IDE;Development;
+StartupWMClass=Eclipse
+MimeType=text/x-java;
+Name[en]=Eclipse
+Name[en_US]=Eclipse
+
+# 5. Instalar shortcut
+sudo desktop-file-install /usr/share/applications/eclipse.desktop
+
+# 6. Actualizar base de datos de aplicaciones
+sudo update-desktop-database
+
+# 7. Instalar Java (si es necesario)
+sudo apt install default-jdk
+Instalar Visual Studio Code
+bash
+# Método 1: Desde repositorio Microsoft
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+sudo install -o root -g root -m 644 packages.microsoft.gpg /etc/apt/trusted.gpg.d/
+sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
+sudo apt update
+sudo apt install code
+
+# Método 2: Descarga directa
+wget https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64 -O vscode.deb
+sudo dpkg -i vscode.deb
+Instalar lenguajes de programación
+bash
+# Python y herramientas
+sudo apt install python3 python3-pip python3-venv
+sudo apt install python2  # Para compatibilidad con herramientas antiguas
+
+# Node.js y npm
+sudo apt install nodejs npm
+
+# Go
+sudo apt install golang
+
+# Ruby
+sudo apt install ruby ruby-dev
+
+# Java
+sudo apt install default-jdk default-jre
+
+# C/C++
+sudo apt install gcc g++ make cmake
+8. Personalización Avanzada
+Configurar aliases y funciones
+bash
+# Editar .bashrc
+nano ~/.bashrc
+
+# Agregar aliases útiles
+alias update='sudo apt update && sudo apt upgrade -y'
+alias cleanup='sudo apt autoremove -y && sudo apt autoclean'
+alias ports='netstat -tulanp'
+alias ll='ls -la'
+alias ip='ip -c'
+alias untar='tar -zxvf'
+alias wifi='nmcli dev wifi'
+alias myip='curl ifconfig.me'
+
+# Para pentesting
+alias nmap-scan='sudo nmap -sV -sC -O'
+alias web-scan='nikto -h'
+
+# Recargar configuración
+source ~/.bashrc
+Configurar prompt personalizado
+bash
+# Editar .bashrc
+nano ~/.bashrc
+
+# Agregar al final:
+export PS1="\[\e[31m\]\u\[\e[m\]@\[\e[32m\]\h\[\e[m\]:\[\e[34m\]\w\[\e[m\]\\$ "
+
+# O más avanzado:
+export PS1="\[\033[01;31m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\\$ "
+Instalar y configurar Zsh
+bash
+# Instalar Zsh
+sudo apt install zsh zsh-syntax-highlighting zsh-autosuggestions
+
+# Instalar Oh My Zsh
+sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+# Cambiar shell por defecto
+chsh -s $(which zsh)
+
+# Configurar tema
+nano ~/.zshrc
+# ZSH_THEME="agnoster"
+# ZSH_THEME="powerlevel10k/powerlevel10k"
+
+# Instalar tema powerlevel10k
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+Configurar herramientas de virtualización
+bash
+# Instalar VirtualBox
+sudo apt install virtualbox virtualbox-ext-pack
+
+# Instalar VMware Workstation
+# Descargar desde: https://www.vmware.com/products/workstation-pro.html
+chmod +x VMware-Workstation-Full-*.bundle
+sudo ./VMware-Workstation-Full-*.bundle
+
+# Instalar QEMU/KVM
+sudo apt install qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager
+sudo adduser $USER libvirt
+sudo adduser $USER libvirt-qemu
+
+# Verificar instalación
+virsh list --all
+9. Scripts de Automatización
+Script de post-instalación completo
+bash
+#!/bin/bash
+# kali-postinstall.sh
+# Script completo de post-instalación para Kali Linux
+
+set -e  # Detener en error
+
+# Colores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Funciones de utilidad
+info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+success() { echo -e "${GREEN}[OK]${NC} $1"; }
+warning() { echo -e "${YELLOW}[ADVERTENCIA]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+
+# Verificar si es root
+if [ "$EUID" -ne 0 ]; then 
+    error "Por favor ejecuta como root: sudo $0"
+fi
+
+echo "========================================="
+echo "  CONFIGURACIÓN POST-INSTALACIÓN KALI"
+echo "========================================="
+echo
+
+# Paso 1: Actualizar sistema
+info "Actualizando sistema..."
+apt update && apt upgrade -y
+success "Sistema actualizado"
+
+# Paso 2: Instalar herramientas esenciales
+info "Instalando herramientas esenciales..."
+apt install -y \
+    keepassxc \
+    git \
+    curl \
+    wget \
+    htop \
+    neofetch \
+    tmux \
+    net-tools \
+    vim \
+    gnupg \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates
+success "Herramientas esenciales instaladas"
+
+# Paso 3: Configurar repositorios
+info "Verificando repositorios..."
+if ! grep -q "kali-rolling main non-free contrib" /etc/apt/sources.list; then
+    warning "Repositorios no configurados correctamente"
+    echo "deb http://http.kali.org/kali kali-rolling main non-free contrib" > /etc/apt/sources.list
+    success "Repositorios configurados"
+fi
+
+# Paso 4: Instalar herramientas de pentesting adicionales
+info "Instalando herramientas de pentesting..."
+apt install -y \
+    metasploit-framework \
+    nmap \
+    wireshark \
+    burpsuite \
+    sqlmap \
+    john \
+    hashcat \
+    hydra \
+    aircrack-ng \
+    recon-ng \
+    maltego
+success "Herramientas de pentesting instaladas"
+
+# Paso 5: Configurar entorno gráfico
+info "Configurando entorno gráfico..."
+# Instalar temas
+apt install -y arc-theme papirus-icon-theme
+
+# Configurar lightdm
+if [ -f /etc/lightdm/lightdm-gtk-greeter.conf ]; then
+    sed -i 's/^background=.*/background=\/usr\/share\/backgrounds\/kali\/kali-blur.png/' /etc/lightdm/lightdm-gtk-greeter.conf
+fi
+success "Entorno gráfico configurado"
+
+# Paso 6: Configurar red
+info "Configurando servicios de red..."
+systemctl enable bluetooth
+systemctl start bluetooth
+
+# Configurar SSH
+apt install -y openssh-server
+sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
+systemctl restart ssh
+success "Servicios de red configurados"
+
+# Paso 7: Instalar herramientas de desarrollo
+info "Instalando herramientas de desarrollo..."
+apt install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    nodejs \
+    npm \
+    default-jdk \
+    gcc \
+    g++ \
+    make
+
+# Instalar Visual Studio Code
+if ! command -v code &> /dev/null; then
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+    install -o root -g root -m 644 packages.microsoft.gpg /etc/apt/trusted.gpg.d/
+    echo "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list
+    apt update
+    apt install -y code
+fi
+success "Herramientas de desarrollo instaladas"
+
+# Paso 8: Configurar seguridad
+info "Configurando seguridad..."
+# Configurar firewall
+apt install -y ufw
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow ssh
+ufw --force enable
+
+# Deshabilitar servicios innecesarios
+systemctl disable apache2 2>/dev/null || true
+systemctl disable mysql 2>/dev/null || true
+success "Seguridad configurada"
+
+# Paso 9: Limpieza final
+info "Realizando limpieza final..."
+apt autoremove -y
+apt autoclean
+success "Limpieza completada"
+
+# Paso 10: Mostrar información del sistema
+info "Mostrando información del sistema..."
+neofetch
+
+echo
+echo "========================================="
+success "CONFIGURACIÓN COMPLETADA EXITOSAMENTE"
+echo "========================================="
+echo
+echo "Recomendaciones:"
+echo "1. Reiniciar el sistema: sudo reboot"
+echo "2. Cambiar contraseña de usuario: passwd"
+echo "3. Configurar backup regular"
+echo "4. Mantener sistema actualizado"
+echo
+Script para backup de configuración
+bash
+#!/bin/bash
+# backup-kali-config.sh
+
+BACKUP_DIR="$HOME/kali-backup-$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$BACKUP_DIR"
+
+echo "Creando backup de configuración Kali Linux..."
+echo "Directorio: $BACKUP_DIR"
+
+# Copiar configuraciones importantes
+cp -r ~/.bashrc "$BACKUP_DIR/"
+cp -r ~/.ssh "$BACKUP_DIR/" 2>/dev/null || true
+cp -r ~/.zshrc "$BACKUP_DIR/" 2>/dev/null || true
+cp -r ~/.config "$BACKUP_DIR/" 2>/dev/null || true
+
+# Configuraciones del sistema
+sudo cp /etc/apt/sources.list "$BACKUP_DIR/"
+sudo cp /etc/ssh/sshd_config "$BACKUP_DIR/"
+sudo cp /etc/lightdm/lightdm-gtk-greeter.conf "$BACKUP_DIR/" 2>/dev/null || true
+
+# Lista de paquetes instalados
+dpkg --get-selections > "$BACKUP_DIR/installed-packages.txt"
+
+# Comprimir backup
+tar -czf "$BACKUP_DIR.tar.gz" "$BACKUP_DIR"
+rm -rf "$BACKUP_DIR"
+
+echo "Backup completado: $BACKUP_DIR.tar.gz"
+Script para restaurar configuración
+bash
+#!/bin/bash
+# restore-kali-config.sh
+
+if [ -z "$1" ]; then
+    echo "Uso: $0 archivo-backup.tar.gz"
+    exit 1
+fi
+
+BACKUP_FILE="$1"
+RESTORE_DIR="/tmp/kali-restore-$(date +%s)"
+
+echo "Restaurando configuración desde: $BACKUP_FILE"
+echo "Directorio temporal: $RESTORE_DIR"
+
+# Extraer backup
+mkdir -p "$RESTORE_DIR"
+tar -xzf "$BACKUP_FILE" -C "$RESTORE_DIR"
+
+# Restaurar archivos
+cp -r "$RESTORE_DIR"/*/.bashrc ~/
+cp -r "$RESTORE_DIR"/*/.ssh ~/ 2>/dev/null || true
+cp -r "$RESTORE_DIR"/*/.zshrc ~/ 2>/dev/null || true
+cp -r "$RESTORE_DIR"/*/.config ~/ 2>/dev/null || true
+
+# Restaurar configuraciones del sistema (con cuidado)
+read -p "¿Restaurar configuraciones del sistema? (s/N): " respuesta
+if [[ $respuesta =~ ^[Ss]$ ]]; then
+    sudo cp "$RESTORE_DIR"/*/sources.list /etc/apt/
+    sudo cp "$RESTORE_DIR"/*/sshd_config /etc/ssh/
+    sudo cp "$RESTORE_DIR"/*/lightdm-gtk-greeter.conf /etc/lightdm/ 2>/dev/null || true
+fi
+
+# Limpiar
+rm -rf "$RESTORE_DIR"
+
+echo "Restauración completada"
+echo "Reinicia el sistema para aplicar todos los cambios"
+Resolución de Problemas Comunes
+Problemas con repositorios
+bash
+# Error: "Failed to fetch"
+sudo rm /var/lib/apt/lists/* -vf
+sudo apt update
+
+# Error de claves GPG
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys [CLAVE]
+Problemas con display manager
+bash
+# Si lightdm no funciona
+sudo systemctl stop lightdm
+sudo systemctl start gdm3  # o sddm, según instalado
+
+# Cambiar gestor de display
+sudo dpkg-reconfigure lightdm
+Problemas con WiFi
+bash
+# Reiniciar servicio de red
+sudo systemctl restart NetworkManager
+
+# Ver logs
+sudo dmesg | grep -i wifi
+sudo journalctl -u NetworkManager
+
+# Reinstalar controladores
+sudo apt install --reinstall firmware-iwlwifi
+Espacio en disco bajo
+bash
+# Limpiar cache de apt
+sudo apt clean
+
+# Limpiar kernels antiguos
+sudo apt autoremove --purge
+
+# Ver espacio usado
+sudo du -sh /var/log/* 2>/dev/null
+sudo journalctl --vacuum-time=3d
+Consejos Finales
+Seguridad
+Cambiar contraseña por defecto: passwd
+
+Configurar firewall: UFW o iptables
+
+Actualizar regularmente: sudo apt update && sudo apt upgrade
+
+Usar VPN para pruebas de penetración
+
+Documentar actividades en lab journal
+
+Optimización
+Usar ZRAM para sistemas con poca RAM
+
+Configurar swap si es necesario
+
+Deshabilitar servicios innecesarios
+
+Usar aliases para comandos frecuentes
+
+Mantenimiento
+Backups regulares de configuraciones
+
+Monitorear logs: sudo journalctl -f
+
+Limpiar archivos temporales regularmente
+
+Verificar integridad del sistema periódicamente

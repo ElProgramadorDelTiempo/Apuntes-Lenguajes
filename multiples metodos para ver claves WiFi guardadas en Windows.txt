@@ -1,0 +1,556 @@
+Métodos para Ver Contraseñas WiFi Guardadas
+1. Usando netsh (Comando Original Mejorado)
+cmd
+# Mostrar todos los perfiles WiFi guardados
+netsh wlan show profiles
+
+# Mostrar información detallada de un perfil específico
+netsh wlan show profile name="NOMBRE-DE-LA-RED" key=clear
+
+# Exportar todas las claves a un archivo de texto
+netsh wlan show profiles | findstr ":" > perfiles.txt
+for /f "tokens=2 delims=:" %i in (perfiles.txt) do (
+    set "red=%~i"
+    set "red=!red:~1!"
+    netsh wlan show profile name="!red!" key=clear >> claves_wifi.txt
+)
+
+# Ver solo la clave de una red específica
+netsh wlan show profile name="MiCasa" key=clear | findstr "Contenido"
+2. Script Batch Automatizado
+batch
+@echo off
+chcp 65001 > nul
+setlocal enabledelayedexpansion
+
+echo ================================================
+echo    EXTRACTOR DE CLAVES WIFI - WINDOWS
+echo ================================================
+echo.
+
+REM Verificar privilegios de administrador
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo [ERROR] Ejecuta como Administrador
+    echo Presiona cualquier tecla para salir...
+    pause >nul
+    exit /b 1
+)
+
+echo [✓] Ejecutando como administrador
+echo.
+
+REM Crear carpeta para resultados
+set "FECHA=%date:/=-%_%time::=-%"
+set "FECHA=%FECHA: =_%"
+set "CARPETA=Wifi_Keys_%FECHA%"
+mkdir "%CARPETA%" 2>nul
+
+REM Archivos de salida
+set "TODAS=%CARPETA%\todas_las_redes.txt"
+set "RESUMEN=%CARPETA%\resumen_claves.txt"
+
+echo [i] Buscando perfiles WiFi guardados...
+echo.
+
+REM Obtener lista de perfiles
+netsh wlan show profiles > "%TODAS%"
+
+REM Extraer nombres de redes
+set "contador=0"
+echo REDES WIFI ENCONTRADAS: > "%RESUMEN%"
+echo ======================= >> "%RESUMEN%"
+echo. >> "%RESUMEN%"
+
+for /f "tokens=2 delims=:" %%i in ('netsh wlan show profiles ^| findstr ":"') do (
+    set "red=%%i"
+    set "red=!red:~1!"
+    
+    if not "!red!"=="" (
+        set /a contador+=1
+        echo [!contador!] !red!
+        echo [!contador!] !red! >> "%RESUMEN%"
+        
+        REM Crear archivo individual para cada red
+        set "archivo=%CARPETA%\!contador!_!red!.txt"
+        echo [!contador!] !red! > "!archivo!"
+        echo ================ >> "!archivo!"
+        
+        REM Obtener información detallada
+        netsh wlan show profile name="!red!" key=clear >> "!archivo!" 2>nul
+        
+        REM Extraer solo la clave
+        for /f "tokens=3" %%k in ('netsh wlan show profile name^="!red!" key^=clear ^| findstr "Contenido"') do (
+            set "clave=%%k"
+            echo Clave: !clave! >> "!archivo!"
+            echo Clave: !clave! >> "%RESUMEN%"
+        )
+        
+        echo. >> "!archivo!"
+        echo. >> "%RESUMEN%"
+    )
+)
+
+echo.
+echo [✓] Proceso completado
+echo [✓] Redes encontradas: %contador%
+echo [✓] Resultados guardados en: %CARPETA%
+echo.
+
+REM Mostrar resumen
+type "%RESUMEN%"
+
+echo.
+echo Presiona cualquier tecla para abrir la carpeta...
+pause >nul
+start "" "%CARPETA%"
+3. Usando PowerShell (Método Avanzado)
+powershell
+# Método 1: Usando netsh desde PowerShell
+$perfiles = netsh wlan show profiles | Select-String ":\s+(.+)$" | ForEach-Object {$_.Matches.Groups[1].Value.Trim()}
+
+foreach ($perfil in $perfiles) {
+    $info = netsh wlan show profile name="$perfil" key=clear
+    $clave = ($info | Select-String "Contenido de la clave\s+:\s+(.+)").Matches.Groups[1].Value
+    [PSCustomObject]@{
+        Red = $perfil
+        Clave = $clave
+    }
+}
+
+# Método 2: Usando WLAN API de Windows (Windows 8+)
+function Get-WifiPasswords {
+    [CmdletBinding()]
+    param(
+        [Parameter(Position=0)]
+        [string]$ProfileName = "*"
+    )
+    
+    # Requiere ejecución como administrador
+    if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+        Write-Error "Este comando requiere privilegios de administrador"
+        return
+    }
+    
+    # Obtener perfiles WiFi
+    $profiles = netsh wlan show profiles | Select-String ":\s+(.+)$" | ForEach-Object {$_.Matches.Groups[1].Value.Trim()} | Where-Object {$_ -like $ProfileName}
+    
+    $results = @()
+    
+    foreach ($profile in $profiles) {
+        try {
+            $xml = netsh wlan export profile name="$profile" key=clear folder="$env:TEMP" 2>$null
+            $xmlFile = Get-ChildItem "$env:TEMP\Wi-Fi-$profile.xml" -ErrorAction SilentlyContinue
+            
+            if ($xmlFile) {
+                $xmlContent = [xml](Get-Content $xmlFile.FullName)
+                $keyMaterial = $xmlContent.WLANProfile.MSM.Security.sharedKey.keyMaterial
+                
+                $result = [PSCustomObject]@{
+                    NombreRed = $profile
+                    Contraseña = $keyMaterial
+                    Autenticación = $xmlContent.WLANProfile.MSM.Security.authEncryption.authentication
+                    Cifrado = $xmlContent.WLANProfile.MSM.Security.authEncryption.encryption
+                    FechaExportación = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                }
+                
+                $results += $result
+                
+                # Eliminar archivo temporal
+                Remove-Item $xmlFile.FullName -Force
+            }
+        }
+        catch {
+            Write-Warning "Error al procesar el perfil '$profile': $_"
+        }
+    }
+    
+    return $results
+}
+
+# Uso de la función
+Get-WifiPasswords | Format-Table -AutoSize
+Get-WifiPasswords -ProfileName "MiCasa" | Format-List
+Get-WifiPasswords | Export-Csv -Path "wifi_passwords.csv" -NoTypeInformation -Encoding UTF8
+4. Script PowerShell Completo con Interfaz Gráfica
+powershell
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+# Crear formulario
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "Extractor de Claves WiFi"
+$form.Size = New-Object System.Drawing.Size(600,500)
+$form.StartPosition = "CenterScreen"
+
+# Etiqueta título
+$label = New-Object System.Windows.Forms.Label
+$label.Location = New-Object System.Drawing.Point(10,10)
+$label.Size = New-Object System.Drawing.Size(560,30)
+$label.Text = "REDES WIFI GUARDADAS EN EL SISTEMA"
+$label.Font = New-Object System.Drawing.Font("Arial",12,[System.Drawing.FontStyle]::Bold)
+$label.TextAlign = "MiddleCenter"
+$form.Controls.Add($label)
+
+# ListBox para mostrar redes
+$listBox = New-Object System.Windows.Forms.ListBox
+$listBox.Location = New-Object System.Drawing.Point(10,50)
+$listBox.Size = New-Object System.Drawing.Size(560,300)
+$listBox.Font = New-Object System.Drawing.Font("Consolas",10)
+$form.Controls.Add($listBox)
+
+# Botón para cargar redes
+$btnCargar = New-Object System.Windows.Forms.Button
+$btnCargar.Location = New-Object System.Drawing.Point(10,360)
+$btnCargar.Size = New-Object System.Drawing.Size(100,30)
+$btnCargar.Text = "Cargar Redes"
+$btnCargar.Add_Click({
+    $listBox.Items.Clear()
+    $perfiles = netsh wlan show profiles | Select-String ":\s+(.+)$" | ForEach-Object {$_.Matches.Groups[1].Value.Trim()}
+    foreach ($perfil in $perfiles) {
+        $listBox.Items.Add($perfil)
+    }
+})
+$form.Controls.Add($btnCargar)
+
+# Botón para mostrar clave
+$btnMostrar = New-Object System.Windows.Forms.Button
+$btnMostrar.Location = New-Object System.Drawing.Point(120,360)
+$btnMostrar.Size = New-Object System.Drawing.Size(100,30)
+$btnMostrar.Text = "Mostrar Clave"
+$btnMostrar.Add_Click({
+    if ($listBox.SelectedItem) {
+        $red = $listBox.SelectedItem.ToString()
+        $info = netsh wlan show profile name="$red" key=clear
+        $clave = ($info | Select-String "Contenido de la clave\s+:\s+(.+)").Matches.Groups[1].Value
+        
+        [System.Windows.Forms.MessageBox]::Show(
+            "Red: $red`nClave: $clave",
+            "Contraseña WiFi",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        )
+    }
+})
+$form.Controls.Add($btnMostrar)
+
+# Botón para exportar todas
+$btnExportar = New-Object System.Windows.Forms.Button
+$btnExportar.Location = New-Object System.Drawing.Point(230,360)
+$btnExportar.Size = New-Object System.Drawing.Size(100,30)
+$btnExportar.Text = "Exportar Todas"
+$btnExportar.Add_Click({
+    $saveDialog = New-Object System.Windows.Forms.SaveFileDialog
+    $saveDialog.Filter = "Archivo de texto (*.txt)|*.txt|Archivo CSV (*.csv)|*.csv"
+    $saveDialog.FileName = "wifi_passwords_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+    
+    if ($saveDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $resultados = @()
+        $perfiles = netsh wlan show profiles | Select-String ":\s+(.+)$" | ForEach-Object {$_.Matches.Groups[1].Value.Trim()}
+        
+        foreach ($perfil in $perfiles) {
+            $info = netsh wlan show profile name="$perfil" key=clear
+            $clave = ($info | Select-String "Contenido de la clave\s+:\s+(.+)").Matches.Groups[1].Value
+            $resultados += [PSCustomObject]@{
+                Red = $perfil
+                Contraseña = $clave
+                Fecha = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            }
+        }
+        
+        if ($saveDialog.FilterIndex -eq 2) {
+            $resultados | Export-Csv -Path $saveDialog.FileName -NoTypeInformation -Encoding UTF8
+        } else {
+            $resultados | Format-Table -AutoSize | Out-File -FilePath $saveDialog.FileName -Encoding UTF8
+        }
+        
+        [System.Windows.Forms.MessageBox]::Show(
+            "Datos exportados exitosamente a:`n$($saveDialog.FileName)",
+            "Exportación Completada",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        )
+    }
+})
+$form.Controls.Add($btnExportar)
+
+# Mostrar formulario
+$form.ShowDialog()
+5. Método Usando PowerShell One-Liner
+powershell
+# Mostrar todas las claves WiFi en una línea
+(netsh wlan show profiles) | Select-String "\:(.+)$" | %{$name=$_.Matches.Groups[1].Value.Trim(); $_} | %{(netsh wlan show profile name="$name" key=clear)} | Select-String "Contenido de la clave\s+\:\s+(.+)$" | %{$pass=$_.Matches.Groups[1].Value.Trim(); $_} | %{[PSCustomObject]@{ WiFi=$name; PASS=$pass }} | Format-Table -AutoSize
+
+# Versión más legible:
+$perfiles = (netsh wlan show profiles) | Select-String "\:(.+)$" | ForEach-Object {$_.Matches.Groups[1].Value.Trim()}
+foreach ($perfil in $perfiles) {
+    $clave = ((netsh wlan show profile name="$perfil" key=clear) | Select-String "Contenido de la clave\s+\:\s+(.+)$").Matches.Groups[1].Value.Trim()
+    Write-Host "Red: $perfil" -ForegroundColor Cyan
+    Write-Host "Clave: $clave" -ForegroundColor Green
+    Write-Host ("-" * 40)
+}
+6. Método con Exportación a Archivos XML
+cmd
+# Exportar todos los perfiles WiFi a archivos XML
+mkdir %TEMP%\wifi_profiles
+cd %TEMP%\wifi_profiles
+netsh wlan export profile key=clear
+
+# Las claves estarán en los archivos XML como <keyMaterial>
+# Para ver todas las claves:
+findstr /i keyMaterial *.xml
+
+# Script para extraer todas las claves de los XML
+@echo off
+setlocal enabledelayedexpansion
+
+mkdir %TEMP%\wifi_export
+cd %TEMP%\wifi_export
+
+echo Exportando perfiles WiFi...
+netsh wlan export profile key=clear
+
+echo.
+echo ====================================
+echo CONTENIDO DE LOS ARCHIVOS XML:
+echo ====================================
+echo.
+
+for %%f in (*.xml) do (
+    echo Archivo: %%f
+    echo ------------------------------
+    
+    for /f "tokens=2 delims=><" %%a in ('type "%%f" ^| findstr "keyMaterial"') do (
+        echo Clave: %%a
+    )
+    
+    for /f "tokens=2 delims=><" %%b in ('type "%%f" ^| findstr "name"') do (
+        echo Red: %%b
+    )
+    
+    echo.
+)
+7. Script para Backup y Restauración de Perfiles WiFi
+batch
+@echo off
+title Backup y Restauración de Perfiles WiFi
+setlocal enabledelayedexpansion
+
+:menu
+cls
+echo ============================================
+echo    GESTOR DE PERFILES WIFI - WINDOWS
+echo ============================================
+echo.
+echo 1. Backup de todos los perfiles WiFi
+echo 2. Restaurar perfiles WiFi desde backup
+echo 3. Ver claves WiFi guardadas
+echo 4. Exportar claves a archivo seguro
+echo 5. Salir
+echo.
+set /p opcion="Seleccione una opción: "
+
+if "%opcion%"=="1" goto backup
+if "%opcion%"=="2" goto restore
+if "%opcion%"=="3" goto show
+if "%opcion%"=="4" goto export
+if "%opcion%"=="5" exit
+
+:backup
+cls
+echo [BACKUP DE PERFILES WIFI]
+echo.
+set /p carpeta="Carpeta de destino [backup_wifi]: "
+if "%carpeta%"=="" set carpeta=backup_wifi
+
+mkdir "%carpeta%" 2>nul
+echo Exportando perfiles...
+netsh wlan export profile folder="%carpeta%" key=clear
+
+echo.
+echo [✓] Backup completado en: %cd%\%carpeta%
+echo Presione cualquier tecla para continuar...
+pause >nul
+goto menu
+
+:restore
+cls
+echo [RESTAURAR PERFILES WIFI]
+echo.
+set /p carpeta="Carpeta con archivos XML: "
+if not exist "%carpeta%\*.xml" (
+    echo [ERROR] No se encontraron archivos XML
+    pause
+    goto menu
+)
+
+echo Importando perfiles...
+for %%f in ("%carpeta%\*.xml") do (
+    echo Restaurando: %%~nf
+    netsh wlan add profile filename="%%f" user=current
+)
+
+echo.
+echo [✓] Restauración completada
+pause
+goto menu
+
+:show
+cls
+echo [CLAVES WIFI GUARDADAS]
+echo.
+netsh wlan show profiles | findstr ":"
+echo.
+set /p red="Nombre de red (Enter para todas): "
+if "%red%"=="" (
+    for /f "tokens=2 delims=:" %%i in ('netsh wlan show profiles ^| findstr ":"') do (
+        set "nombre=%%i"
+        set "nombre=!nombre:~1!"
+        call :mostrar_clave "!nombre!"
+    )
+) else (
+    call :mostrar_clave "%red%"
+)
+echo.
+pause
+goto menu
+
+:mostrar_clave
+netsh wlan show profile name=%~1 key=clear | findstr "Contenido"
+goto :eof
+
+:export
+cls
+echo [EXPORTAR CLAVES SEGURO]
+echo.
+set /p archivo="Nombre del archivo [wifi_secure.txt]: "
+if "%archivo%"=="" set archivo=wifi_secure.txt
+
+(
+    echo ============================================
+    echo    CLAVES WIFI - %date% %time%
+    echo ============================================
+    echo.
+) > "%archivo%"
+
+for /f "tokens=2 delims=:" %%i in ('netsh wlan show profiles ^| findstr ":"') do (
+    set "red=%%i"
+    set "red=!red:~1!"
+    for /f "tokens=3" %%k in ('netsh wlan show profile name^="!red!" key^=clear ^| findstr "Contenido"') do (
+        echo Red: !red! >> "%archivo%"
+        echo Clave: %%k >> "%archivo%"
+        echo. >> "%archivo%"
+    )
+)
+
+echo [✓] Claves exportadas a: %archivo%
+echo Nota: Proteja este archivo adecuadamente
+pause
+goto menu
+Métodos Alternativos y Herramientas de Terceros
+1. Usando WirelessKeyView (NirSoft)
+Herramienta gratuita de NirSoft
+
+No requiere instalación
+
+Muestra todas las claves WiFi guardadas
+
+Exporta a varios formatos
+
+bash
+# Descargar desde: https://www.nirsoft.net/utils/wireless_key.html
+# Ejecutar como administrador
+2. Usando Wifi Password Revealer
+Interfaz gráfica simple
+
+Muestra claves en texto plano
+
+Opción para exportar
+
+3. Accediendo al Registro de Windows
+cmd
+# Las claves WiFi están almacenadas en el registro
+reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkList\Profiles"
+
+# Pero están encriptadas, requiere descifrado
+Consideraciones de Seguridad
+1. Solo para uso legítimo
+Recuperar tu propia contraseña olvidada
+
+Configurar nuevos dispositivos en tu red
+
+Migrar a nuevo equipo
+
+2. Proteja la información obtenida
+No compartir archivos con claves
+
+Eliminar archivos temporales
+
+Usar cifrado para backups
+
+3. Ejecutar solo como administrador
+Estos comandos requieren privilegios elevados
+
+Verificar siempre la fuente de scripts
+
+4. En sistemas corporativos
+Consultar políticas de la empresa
+
+Posible violación de políticas de seguridad
+
+Usar solo con autorización
+
+Solución de Problemas Comunes
+Error: "Se denegó el acceso"
+cmd
+# Ejecutar como administrador
+# Botón derecho -> Ejecutar como administrador
+
+# O desde PowerShell
+Start-Process cmd -Verb RunAs
+No aparecen perfiles WiFi
+cmd
+# Verificar si hay adaptador WiFi
+netsh wlan show interfaces
+
+# Ver todos los perfiles incluyendo de otros usuarios
+netsh wlan show profiles user=all
+Contraseña aparece en blanco
+powershell
+# La red podría usar autenticación empresarial (WPA2-Enterprise)
+netsh wlan show profile name="RedEmpresa" key=clear
+
+# O la clave podría estar almacenada de forma diferente
+# Revisar configuración de seguridad en Windows
+Exportar perfiles para otro equipo
+cmd
+# Exportar sin claves (solo configuración)
+netsh wlan export profile folder="C:\backup"
+
+# Exportar con claves (requiere admin)
+netsh wlan export profile folder="C:\backup" key=clear
+
+# Importar en nuevo equipo
+netsh wlan add profile filename="C:\backup\Wi-Fi-Red.xml"
+Comandos Rápidos de Referencia
+cmd
+# Mostrar todas las redes guardadas
+netsh wlan show profiles
+
+# Ver clave de red específica
+netsh wlan show profile name="MiRed" key=clear
+
+# Exportar todas las configuraciones
+netsh wlan export profile folder="C:\WifiBackup" key=clear
+
+# Ver interfaces WiFi disponibles
+netsh wlan show interfaces
+
+# Conectar a red WiFi desde CMD
+netsh wlan connect name="MiRed"
+
+# Desconectar de red WiFi
+netsh wlan disconnect
+
+# Ver redes disponibles
+netsh wlan show networks mode=bssid
